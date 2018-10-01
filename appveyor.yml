@@ -1,0 +1,60 @@
+---
+version: 1.1.x.{build}
+skip_commits:
+  message: /^\(?doc\)?.*/
+clone_depth: 10
+init:
+  - SET
+  - 'mkdir C:\ProgramData\PuppetLabs\code && exit 0'
+  - 'mkdir C:\ProgramData\PuppetLabs\facter && exit 0'
+  - 'mkdir C:\ProgramData\PuppetLabs\hiera && exit 0'
+  - 'mkdir C:\ProgramData\PuppetLabs\puppet\var && exit 0'
+environment:
+  BLACKSMITH_FORGE_PASSWORD:
+    secure: PU87RgiZV8RX0XRvOyIMpJ0vMJKXmi4M4G2cJJnc8QY
+  BLACKSMITH_FORGE_USERNAME: hurt.bill@gmail.com
+  BLACKSMITH_FORGE_URL: https://forgeapi.puppetlabs.com
+  matrix:
+    -
+      PUPPET_GEM_VERSION: ~> 4.0
+      RUBY_VERSION: 21
+    -
+      PUPPET_GEM_VERSION: ~> 4.0
+      RUBY_VERSION: 21-x64
+    -
+      PUPPET_GEM_VERSION: ~> 5.0
+      RUBY_VERSION: 24
+    -
+      PUPPET_GEM_VERSION: ~> 5.0
+      RUBY_VERSION: 24-x64
+matrix:
+  fast_finish: true
+install:
+  - set PATH=C:\Ruby%RUBY_VERSION%\bin;%PATH%
+  - bundle install --jobs 4 --retry 2 --without system_tests
+  - type Gemfile.lock
+build: off
+test_script:
+  - bundle exec puppet -V
+  - ruby -v
+  - gem -v
+  - bundle -v
+  - bundle exec rake spec_prep
+  - bundle exec rspec .\spec\acceptance
+after_test:
+  - ps: |
+      if($env:APPVEYOR_REPO_TAG) {
+        Write-Host 'I totally would have deployed this.'
+        # bundle exec rake build
+        # bundle exec rake module:push
+      }
+      else {
+        return
+      }
+notifications:
+  - provider: Email
+    to:
+      - william.hurt@puppet.com
+    on_build_success: false
+    on_build_failure: true
+    on_build_status_changed: false
